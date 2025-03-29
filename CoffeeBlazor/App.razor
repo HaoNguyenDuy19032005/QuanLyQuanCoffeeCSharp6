@@ -1,4 +1,6 @@
-﻿<Router AppAssembly="@typeof(App).Assembly">
+﻿@inject NavigationManager NavigationManager
+
+<Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
@@ -10,3 +12,15 @@
         </LayoutView>
     </NotFound>
 </Router>
+
+@code {
+    // Điều hướng sau khi render
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Điều hướng đến trang /staff khi ứng dụng vừa khởi động
+            NavigationManager.NavigateTo("/staffs");
+        }
+    }
+}

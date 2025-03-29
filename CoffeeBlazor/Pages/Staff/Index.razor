@@ -1,0 +1,350 @@
+﻿@page "/staffs"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<div class="main-container">
+    <!-- Sidebar -->
+    <aside class="nav-container">
+        <div class="logo">
+            <img src="img/Anh_Lion.jpg" alt="Logo" />
+        </div>
+        <div class="user-menu">
+            <div class="user-info" @onclick="ToggleDropdown">
+                <img src="~/img/anhH2.jpg" alt="Avatar" class="user-avatar">
+                <span id="userName" class="user-name">Đang tải...</span>
+                <i class="fas fa-caret-down"></i>
+            </div>
+            @if (showDropdown)
+            {
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="javascript:void(0);" @onclick="Logout">Đăng xuất</a>
+                </div>
+            }
+        </div>
+        <nav class="nav-links">
+            <a href="javascript:void(0);" @onclick="ToggleOrderSection">Đơn hàng</a>
+        </nav>
+    </aside>
+
+    <!-- Product Section -->
+    @if (!isOrderSectionVisible)
+    {
+        <section class="product-section">
+            <div class="search-toolbar">
+                <div class="search-bar">
+                    <input type="text" placeholder="Tìm sản phẩm..." @oninput="SearchProducts" />
+                </div>
+                <div class="filter-button">
+                    <button @onclick="() => FilterByCategory(null)" class="@GetCategoryClass(null)">Tất cả</button>
+                    <button @onclick="() => FilterByCategory(1)" class="@GetCategoryClass(1)">Nước</button>
+                    <button @onclick="() => FilterByCategory(2)" class="@GetCategoryClass(2)">Món ăn</button>
+                </div>
+            </div>
+
+            <div class="products-section">
+                @if (products != null && products.Any())
+                {
+                    @foreach (var product in products)
+                    {
+                        <div class="product" data-category="@product.CategoryId" @onclick="() => AddToCart(product)">
+                            <img src="@product.Img" alt="@product.Name" loading="lazy" />
+                            <p class="product-name" @onclick="() => ShowProductDetail(product.Id)">@product.Name</p>
+                            <span class="product-price">@product.Price.ToString("#,0", new System.Globalization.CultureInfo("vi-VN"))<sup>đ</sup></span>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="no-products">Không có sản phẩm nào để hiển thị.</p>
+                }
+            </div>
+        </section>
+    }
+    <!-- Phần Danh sách đơn hàng đã thanh toán -->
+    @if (isOrderSectionVisible)
+    {
+        <section class="paid-orders-section">
+            <h2 class="donhang" style="text-align: center;">Đơn hàng đã thanh toán</h2>
+            <div class="order-details">
+                <table>
+                    <thead>
+                        <tr style="background-color: #2EAE74;">
+                            <th>Mã đơn hàng</th>
+                            <th>Tên khách hàng</th>
+                            <th>Tổng tiền</th>
+                            <th>Ngày thanh toán</th>
+                            <th>Chi tiết</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in paidOrders)
+                        {
+                            <tr>
+                                <td>@order.Id</td>
+                                <td>@order.CustomerName</td>
+                                <td>@order.TotalAmount.ToString("#,0", new System.Globalization.CultureInfo("vi-VN"))</td>
+                                <td>@order.PaymentDate.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    <button @onclick="() => ShowOrderDetails(order.Id)" class="btn-view-details">Xem chi tiết</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+
+    <div class="order-section">
+        <h2 class="donhang" style="text-align: center;">Đơn hàng</h2>
+        <div class="order-details_DonHang">
+            <table>
+                <thead>
+                    <tr style="background-color: #2EAE74;">
+                        <th>Tên sản phẩm</th>
+                        <th>Giá</th>
+                        <th>Số lượng</th>
+                        <th>Loại bỏ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in orderItems)
+                    {
+                        <tr>
+                            <td>@item.Product.Name</td>
+                            <td>@item.Product.Price.ToString("#,0", new System.Globalization.CultureInfo("vi-VN"))</td>
+                            <td><input type="number" @bind="item.Quantity" /></td>
+                            <td>
+                                <button @onclick="() => RemoveItem(item)" class="btn-remove">Xóa</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div id="orderTableBody" class="order-inputs">
+            <div class="textbox">
+                <label for="note">Ghi chú:</label>
+                <input type="text" @bind="note" placeholder="Nhập ghi chú">
+            </div>
+            <div class="textbox">
+                <label for="discount">Giảm giá:</label>
+                <select @bind="selectedDiscount" class="form-control" disabled>
+                    <option value="0">Không có</option>
+                    <option value="5">5%</option>
+                    <option value="10">10%</option>
+                    <option value="20">20%</option>
+                </select>
+            </div>
+            <div class="textbox">
+                <label for="customer-money">Số tiền khách đưa:</label>
+                <input type="text" @bind="customerMoney" placeholder="Nhập số tiền khách đưa" @oninput="FormatMoney">
+            </div>
+        </div>
+
+        <div class="textbox">
+            <label for="change">Tiền thừa:</label>
+            <input type="number" id="change" disabled placeholder="Tiền thừa sẽ được tự động tính">
+        </div>
+        <div id="error-message" class="text-center text-danger" style="display: none;">
+            Số tiền không đủ
+        </div>
+
+        <p style="text-align: center; margin-top: 20px">
+            <strong>Tổng tiền cần thanh toán:</strong> <span id="total-amount">0<sup>đ</sup></span>
+        </p>
+
+        <div class="order-actions">
+            <button @onclick="ResetOrder">Hủy</button>
+            <button @onclick="HandlePayment" disabled="@(!CanPay)">Thanh toán</button>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private List<Product> products; // Khai báo danh sách products
+
+    private string searchQuery = string.Empty;
+    private bool isOrderSectionVisible = false; // Biến để điều khiển việc hiển thị phần đơn hàng
+
+    // Hàm trả về danh sách tất cả sản phẩm
+    private List<Product> GetAllProducts()
+    {
+        return new List<Product>
+        {
+            new Product { Id = 1, Name = "Trà Sữa", Price = 20000, CategoryId = 1, Img = "..." },
+            new Product { Id = 2, Name = "Cà Phê Sữa", Price = 15000, CategoryId = 1, Img = "..." },
+            new Product { Id = 3, Name = "Bạc xỉu", Price = 10000, CategoryId = 1, Img = "..." },
+            new Product { Id = 4, Name = "Phở", Price = 30000, CategoryId = 2, Img = "..." }
+        };
+    }
+
+    private List<PaidOrder> paidOrders = new List<PaidOrder>
+    {
+        new PaidOrder { Id = 1, CustomerName = "Nguyễn Văn A", TotalAmount = 45000, PaymentDate = DateTime.Now.AddDays(-1) },
+        new PaidOrder { Id = 2, CustomerName = "Trần Thị B", TotalAmount = 30000, PaymentDate = DateTime.Now.AddDays(-2) },
+        new PaidOrder { Id = 3, CustomerName = "Lê Minh C", TotalAmount = 60000, PaymentDate = DateTime.Now.AddDays(-3) }
+    };
+
+    private List<OrderItem> orderItems = new List<OrderItem>(); // Danh sách các mặt hàng trong giỏ
+    private string note; // Biến lưu ghi chú
+    private decimal customerMoney; // Biến lưu số tiền khách đưa
+    private int selectedDiscount = 0; // Biến lưu chọn mức giảm giá
+    private bool showDropdown = false; // Biến điều khiển dropdown menu
+
+    private decimal totalAmount => orderItems.Sum(item => item.Product.Price * item.Quantity); // Tính tổng số tiền cần thanh toán
+    private bool CanPay => customerMoney >= totalAmount && orderItems.Any(); // Kiểm tra có đủ tiền để thanh toán không
+
+    // Hàm khởi tạo danh sách sản phẩm
+    protected override async Task OnInitializedAsync()
+    {
+        // Khởi tạo danh sách sản phẩm
+        products = GetAllProducts(); // Gọi hàm để lấy tất cả sản phẩm
+    }
+
+
+    private void ToggleDropdown()
+    {
+        showDropdown = !showDropdown; // Chuyển đổi trạng thái của dropdown menu
+    }
+
+    private void Logout()
+    {
+        // Hàm xử lý đăng xuất (nếu cần)
+    }
+
+    // Hàm điều khiển sự kiện khi người dùng click vào "Đơn hàng" từ sidebar
+    private void ToggleOrderSection()
+    {
+        isOrderSectionVisible = !isOrderSectionVisible; // Chuyển đổi trạng thái hiển thị đơn hàng
+    }
+
+   
+
+    private void SearchProducts(ChangeEventArgs e)
+    {
+        searchQuery = e.Value.ToString(); // Lấy giá trị mới từ input
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            // Lọc danh sách sản phẩm theo từ khóa tìm kiếm
+            products = GetAllProducts().Where(p => p.Name.ToLower().Contains(searchQuery.ToLower())).ToList();
+        }
+        else
+        {
+            // Nếu ô tìm kiếm trống, hiển thị tất cả sản phẩm
+            products = GetAllProducts();
+        }
+    }
+
+
+    // Hàm lọc sản phẩm theo danh mục
+    private void FilterByCategory(int? categoryId)
+    {
+        if (categoryId.HasValue)
+        {
+            // Lọc sản phẩm theo categoryId
+            products = GetAllProducts().Where(p => p.CategoryId == categoryId.Value).ToList();
+        }
+        else
+        {
+            // Nếu chọn "Tất cả", làm mới lại danh sách sản phẩm
+            products = GetAllProducts(); // Hàm này giả sử trả về danh sách tất cả sản phẩm.
+        }
+    }
+
+
+    // Hàm lấy class cho button lọc theo danh mục
+    private string GetCategoryClass(int? categoryId)
+    {
+        return categoryId == selectedDiscount ? "active" : ""; // Kiểm tra nếu danh mục đang chọn
+    }
+
+    // Hàm thêm sản phẩm vào giỏ
+    private void AddToCart(Product product)
+    {
+        var existingItem = orderItems.FirstOrDefault(i => i.Product.Name == product.Name); // Kiểm tra sản phẩm đã có trong giỏ chưa
+        if (existingItem != null)
+        {
+            existingItem.Quantity++; // Nếu có rồi, tăng số lượng
+        }
+        else
+        {
+            orderItems.Add(new OrderItem { Product = product, Quantity = 1 }); // Nếu chưa có, thêm mới sản phẩm vào giỏ
+        }
+    }
+
+    // Hàm xóa sản phẩm khỏi giỏ
+    private void RemoveItem(OrderItem item)
+    {
+        orderItems.Remove(item); // Xóa sản phẩm khỏi giỏ
+    }
+
+    // Hàm reset lại giỏ hàng
+    private void ResetOrder()
+    {
+        orderItems.Clear(); // Xóa tất cả các sản phẩm trong giỏ
+        customerMoney = 0; // Đặt lại tiền khách đưa
+        selectedDiscount = 0; // Đặt lại mức giảm giá
+        note = string.Empty; // Đặt lại ghi chú
+    }
+
+    // Hàm xử lý thanh toán
+    private void HandlePayment()
+    {
+        if (customerMoney < totalAmount)
+        {
+            // Nếu tiền khách đưa không đủ, thông báo lỗi
+        }
+        else
+        {
+            // Nếu thanh toán thành công, reset lại giỏ hàng
+            ResetOrder();
+        }
+    }
+
+    // Hàm định dạng số tiền nhập vào
+    private void FormatMoney(ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value.ToString(), out decimal result))
+        {
+            customerMoney = result; // Định dạng và lưu số tiền khách đưa
+        }
+    }
+
+    // Hàm hiển thị chi tiết sản phẩm (có thể mở chi tiết sản phẩm hoặc điều hướng đến trang chi tiết)
+    private void ShowProductDetail(int productId)
+    {
+        Console.WriteLine($"Showing details for product with ID: {productId}"); // Log chi tiết sản phẩm
+    }
+
+    // Hàm hiển thị chi tiết đơn hàng (có thể mở chi tiết đơn hàng hoặc điều hướng đến trang chi tiết)
+    private void ShowOrderDetails(int orderId)
+    {
+        Console.WriteLine($"Showing details for order with ID: {orderId}"); // Log chi tiết đơn hàng
+    }
+
+    // Các lớp mô tả đối tượng trong hệ thống
+    public class PaidOrder
+    {
+        public int Id { get; set; }
+        public string CustomerName { get; set; }
+        public decimal TotalAmount { get; set; }
+        public DateTime PaymentDate { get; set; }
+    }
+
+    public class Product
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public decimal Price { get; set; }
+        public int CategoryId { get; set; }
+        public string Img { get; set; }
+    }
+
+    public class OrderItem
+    {
+        public Product Product { get; set; }
+        public int Quantity { get; set; }
+    }
+}
