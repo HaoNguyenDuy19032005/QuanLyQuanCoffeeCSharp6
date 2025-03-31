@@ -1,0 +1,313 @@
+﻿@* @page "/register"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<h3>Đăng ký tài khoản</h3>
+
+<EditForm Model="@registerModel" OnValidSubmit="HandleRegisterSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="fullName">Họ và tên</label>
+        <InputText id="fullName" class="form-control" @bind-Value="registerModel.FullName" />
+    </div>
+
+    <div class="form-group">
+        <label for="phone">Số điện thoại</label>
+        <InputText id="phone" class="form-control" @bind-Value="registerModel.PhoneNumber" />
+    </div>
+
+    <div class="form-group">
+        <label for="email">Email</label>
+        <InputText id="email" class="form-control" @bind-Value="registerModel.Email" />
+    </div>
+
+    <div class="form-group">
+        <label for="password">Mật khẩu</label>
+        <InputText id="password" class="form-control" @bind-Value="registerModel.Password" type="password" />
+    </div>
+
+    <div class="form-group">
+        <label for="confirmPassword">Xác nhận mật khẩu</label>
+        <InputText id="confirmPassword" class="form-control" @bind-Value="registerModel.ConfirmPassword" type="password" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Đăng ký</button>
+</EditForm>
+
+@code {
+    private RegisterModel registerModel = new RegisterModel();
+
+    private async Task HandleRegisterSubmit()
+    {
+        var result = await Http.PostAsJsonAsync("api/customers", registerModel);
+        if (result.IsSuccessStatusCode)
+        {
+            // Nếu đăng ký thành công, chuyển hướng đến trang đăng nhập
+            Navigation.NavigateTo("/login");
+        }
+        else
+        {
+            // Hiển thị thông báo lỗi nếu đăng ký không thành công
+            var errorMessage = await result.Content.ReadAsStringAsync();
+            Console.WriteLine($"Lỗi: {errorMessage}"); // Hiển thị lỗi trong console (hoặc có thể hiển thị trên giao diện người dùng)
+        }
+    }
+
+    public class RegisterModel
+    {
+        public string FullName { get; set; }
+        public string PhoneNumber { get; set; }
+        public string Email { get; set; }
+        public string Password { get; set; }
+        public string ConfirmPassword { get; set; }
+    }
+}
+ *@
+@page "/register"
+@layout Layout.Login
+
+
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<div class="login-container">
+    <div class="login-image"></div>
+    <div class="login-form">
+        <!-- Link to Home page using NavigationManager -->
+        <a href="javascript:void(0)" class="home-icon" title="Trang chủ" @onclick="NavigateHome">
+            <i class="fa-solid fa-house"></i>
+        </a>
+
+        <!-- Link to Login page using NavigationManager -->
+        <a href="javascript:void(0)" class="prev-icon" title="Quay lại đăng nhập" @onclick="NavigateToLogin">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
+
+        <!-- Logo Image -->
+        <img src="/Img/AnhSanPham1.png" alt="Logo Lion" />
+
+        <h1>Đăng Ký</h1>
+
+        <EditForm Model="@registerModel" OnValidSubmit="HandleRegisterSubmit" id="registerForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <!-- Full Name -->
+            <label for="fullName">Họ và Tên</label>
+            <InputText id="fullName" class="form-control" @bind-Value="registerModel.FullName" />
+
+            <!-- Phone Number -->
+            <label for="phone">Số Điện Thoại</label>
+            <InputText id="phone" class="form-control" @bind-Value="registerModel.PhoneNumber" 
+                    pattern="\d{10}" title="Số điện thoại phải có 10 chữ số" />
+
+            <span id="phoneError" class="text-danger"></span>
+
+            <!-- Email -->
+            <label for="email">Email</label>
+            <InputText id="email" class="form-control" @bind-Value="registerModel.Email" />
+
+            <span id="emailError" class="text-danger"></span>
+
+            <!-- Password -->
+            <label for="password">Mật khẩu</label>
+            <div class="password-wrapper">
+                <InputText id="password" class="form-control" @bind-Value="registerModel.Password" type="password" />
+                <i class="fa-solid fa-eye-slash togglePassword"></i>
+            </div>
+
+            <!-- Confirm Password -->
+            <label for="confirmPassword">Xác nhận mật khẩu</label>
+            <div class="password-wrapper">
+                <InputText id="confirmPassword" class="form-control" @bind-Value="registerModel.ConfirmPassword" type="password" />
+                <i class="fa-solid fa-eye-slash togglePassword"></i>
+            </div>
+
+            <span id="confirmPasswordError" class="text-danger"></span>
+
+            <!-- Agreement Checkbox -->
+            <div class="register-link">
+                <p>Khách hàng đăng ký Hội Viên Phúc Long cũng sẽ trở thành Hội Viên Win.</p>
+                <label for="agree" class="checkbox-label">
+                    <input type="checkbox" id="agree" name="agree" required />
+                    Tôi đồng ý
+                </label>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="registerBtn">ĐĂNG KÝ</button>
+
+            <!-- Link to Login -->
+            <div class="register-link">
+                Bạn đã có tài khoản ? <a href="javascript:void(0)" @onclick="NavigateToLogin">Đăng nhập</a>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private RegisterModel registerModel = new RegisterModel();
+
+    private async Task HandleRegisterSubmit()
+    {
+        var result = await Http.PostAsJsonAsync("api/customers", registerModel);
+        if (result.IsSuccessStatusCode)
+        {
+            Navigation.NavigateTo("/login");
+        }
+        else
+        {
+            var errorMessage = await result.Content.ReadAsStringAsync();
+            Console.WriteLine($"Lỗi: {errorMessage}");
+        }
+    }
+
+    private void NavigateHome()
+    {
+        Navigation.NavigateTo("/home"); // Change '/home' to your home page route
+    }
+
+    private void NavigateToLogin()
+    {
+        Navigation.NavigateTo("/login"); // Directs to the login page
+    }
+
+    public class RegisterModel
+    {
+        public string FullName { get; set; }
+        public string PhoneNumber { get; set; }
+        public string Email { get; set; }
+        public string Password { get; set; }
+        public string ConfirmPassword { get; set; }
+    }
+}
+
+<style>
+    .login-container {
+        display: flex;
+        justify-content: space-between;
+        height: auto;
+        min-height: 600px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+
+    .password-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .password-wrapper input {
+        flex: 1;
+        padding-right: 30px;
+    }
+
+    .password-wrapper .togglePassword {
+        position: absolute;
+        right: 10px;
+        cursor: pointer;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    #confirmPasswordError {
+        color: red;
+        font-size: 0.9em;
+    }
+
+    button {
+        background-color: #ff6600;
+        color: white;
+        padding: 10px;
+        border: none;
+        cursor: pointer;
+        width: 100%;
+        font-weight: bold;
+    }
+
+    button:hover {
+        background-color: #e65c00;
+    }
+</style>
+
+<script>
+    // Hiển thị / Ẩn mật khẩu
+    document.querySelectorAll(".togglePassword").forEach(item => {
+        item.addEventListener("click", function () {
+            let passwordField = this.previousElementSibling;
+            const type = passwordField.type === "password" ? "text" : "password";
+            passwordField.type = type;
+            this.classList.toggle("fa-eye");
+            this.classList.toggle("fa-eye-slash");
+        });
+    });
+
+    // Kiểm tra xác nhận mật khẩu trước khi submit
+    document.getElementById("confirmPassword").addEventListener("input", function () {
+        let password = document.getElementById("password").value;
+        let confirmPassword = this.value;
+        let errorSpan = document.getElementById("confirmPasswordError");
+
+        if (password !== confirmPassword) {
+            errorSpan.textContent = "Mật khẩu xác nhận không khớp!";
+        } else {
+            errorSpan.textContent = "";
+        }
+    });
+
+    // Kiểm tra email đã tồn tại
+    document.getElementById("email").addEventListener("blur", function () {
+        let email = this.value;
+        fetch(`/User/CheckEmailExists?email=${email}`)
+            .then(response => response.json())
+            .then(exists => {
+                let emailError = document.getElementById("emailError");
+                if (exists) {
+                    emailError.textContent = "❌ Email đã tồn tại!";
+                } else {
+                    emailError.textContent = "";
+                }
+            });
+    });
+
+    // Kiểm tra số điện thoại đã tồn tại
+    document.getElementById("phone").addEventListener("blur", function () {
+        let phone = this.value;
+        fetch(`/User/CheckPhoneExists?phone=${phone}`)
+            .then(response => response.json())
+            .then(exists => {
+                let phoneError = document.getElementById("phoneError");
+                if (exists) {
+                    phoneError.textContent = "❌ Số điện thoại đã được đăng ký!";
+                } else {
+                    phoneError.textContent = "";
+                }
+            });
+    });
+
+    // Kiểm tra checkbox trước khi submit
+    document.getElementById("registerForm").addEventListener("submit", function (event) {
+        let password = document.getElementById("password").value;
+        let confirmPassword = document.getElementById("confirmPassword").value;
+        let agree = document.getElementById("agree").checked;
+        let confirmPasswordError = document.getElementById("confirmPasswordError");
+
+        if (password !== confirmPassword) {
+            confirmPasswordError.textContent = "❌ Mật khẩu xác nhận không khớp!";
+            event.preventDefault();
+        }
+
+        if (!agree) {
+            alert("❌ Bạn phải đồng ý với điều khoản trước khi đăng ký.");
+            event.preventDefault();
+        }
+    });
+</script>
