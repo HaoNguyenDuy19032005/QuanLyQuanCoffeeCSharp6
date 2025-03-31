@@ -1,4 +1,4 @@
-﻿@page "/login"
+﻿@* @page "/login"
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
@@ -67,6 +67,126 @@
             // Handle any errors that occur during the API calls
             errorMessage = $"Đã xảy ra lỗi khi kiểm tra số điện thoại: {ex.Message}";
         }
+    }
+
+    public class LoginModel
+    {
+        public string PhoneNumber { get; set; }
+    }
+
+    public class Employee
+    {
+        public int Id { get; set; }
+        public string PhoneNumber { get; set; }
+    }
+
+    public class Customer
+    {
+        public int Id { get; set; }
+        public string PhoneNumber { get; set; }
+    }
+}
+ *@
+
+@page "/login"
+@layout Layout.Login
+
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<link href="~/css/Login.css" rel="stylesheet" />
+
+<div class="login-container">
+    <div class="login-image"></div>
+    <div class="login-form">
+        <a href="javascript:void(0)" class="home-icon" title="Trang chủ" @onclick="NavigateHome">
+            <i class="fa-solid fa-house"></i>
+        </a>
+
+        <img src="/Img/AnhSanPham1.png" alt="Logo Lion" />
+
+        <h1>Lion Xin Chào</h1>
+
+        <EditForm Model="@loginModel" OnValidSubmit="HandleLoginSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <label for="phone" style="color: rgb(0, 0, 0); font-weight: bold">Số điện thoại</label>
+            <div class="password-wrapper mb-2">
+                <InputText id="phone" name="phoneNumber" placeholder="Nhập số điện thoại*" @bind-Value="loginModel.PhoneNumber" required />
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    <p>@errorMessage</p>
+                </div>
+            }
+
+            <button type="submit">Tiếp tục</button>
+
+            <div class="register-link">
+                Bạn có tài khoản chưa? <a href="/User/Register">Đăng ký</a>
+            </div>
+
+            <div class="register-link text-center text-danger">
+                @if (failedAttempts >= 5)
+                {
+                    <p>*Nhập sai quá 5 lần sẽ bị khóa tài khoản</p>
+                    <p>Vui lòng ấn "Quên mật khẩu" nếu cần lấy lại mật khẩu</p>
+                }
+            </div>
+
+            <div class="register-link text-center">
+                <a style="text-decoration:underline;" href="/Otp/ConfirmEmail">Bạn quên mật khẩu?</a>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new LoginModel();
+    private string errorMessage;
+    private int failedAttempts = 0; // Track failed login attempts
+
+    private async Task HandleLoginSubmit()
+    {
+        if (string.IsNullOrEmpty(loginModel.PhoneNumber))
+        {
+            errorMessage = "Số điện thoại không được để trống!";
+            return;
+        }
+
+        try
+        {
+            var customerResult = await Http.GetFromJsonAsync<Customer>($"https://localhost:5001/api/Customers/GetByPhoneNumber/{loginModel.PhoneNumber}");
+            if (customerResult != null)
+            {
+                Navigation.NavigateTo($"/login-password/{loginModel.PhoneNumber}");
+            }
+            else
+            {
+                var employeeResult = await Http.GetFromJsonAsync<Employee>($"http://localhost:5001/api/Employees/GetByPhoneNumber/{loginModel.PhoneNumber}");
+                if (employeeResult != null)
+                {
+                    Navigation.NavigateTo($"/login-password/{loginModel.PhoneNumber}");
+                }
+                else
+                {
+                    failedAttempts++;
+                    errorMessage = "Số điện thoại không tồn tại trong hệ thống!";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Đã xảy ra lỗi khi kiểm tra số điện thoại: {ex.Message}";
+        }
+    }
+
+    private void NavigateHome()
+    {
+        Navigation.NavigateTo("/home");
     }
 
     public class LoginModel
